@@ -17,4 +17,6 @@ func RegisterRoutes(r *gin.Engine) {
 	// Game routes
 	r.GET("/game/segment", handlers.GetSegment)
 	r.POST("/game/submit", handlers.SubmitPrediction)
+	r.GET("/leaderboard", handlers.GetLeaderboard)
+
 }

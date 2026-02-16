@@ -47,6 +47,7 @@ func GetSegment(c *gin.Context) {
 func SubmitPrediction(c *gin.Context) {
 
 	type Request struct {
+		UserID     string `json:"user_id"`
 		SegmentID  string `json:"segment_id"`
 		Prediction string `json:"prediction"`
 	}
@@ -99,19 +100,20 @@ func SubmitPrediction(c *gin.Context) {
 	}
 
 	// TEMPORARY: Hardcoded test user ID
-	testUserID := "a7f335ae-0f65-4382-b810-6c8faa88c95f"
+	// testUserID := "a7f335ae-0f65-4382-b810-6c8faa88c95f" changed testuserID to taking input from the request body
 
 	// Insert game session
 	_, err = database.DB.Exec(`
 		INSERT INTO game_sessions (user_id, segment_id, prediction, result, xp_earned)
 		VALUES ($1, $2, $3, $4, $5)
 	`,
-		testUserID,
+		req.UserID,
 		req.SegmentID,
 		req.Prediction,
 		result,
 		xpEarned,
 	)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -123,11 +125,11 @@ func SubmitPrediction(c *gin.Context) {
 	_, err = database.DB.Exec(`
 		UPDATE users
 		SET xp = xp + $1,
-		    total_games = total_games + 1
+			total_games = total_games + 1
 		WHERE id = $2
 	`,
 		xpEarned,
-		testUserID,
+		req.UserID,
 	)
 
 	if err != nil {

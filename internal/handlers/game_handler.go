@@ -48,7 +48,7 @@ func SubmitPrediction(c *gin.Context) {
 
 	type Request struct {
 		SegmentID  string `json:"segment_id"`
-		Prediction string `json:"prediction"` // "UP" or "DOWN"
+		Prediction string `json:"prediction"`
 	}
 
 	var req Request
@@ -82,13 +82,6 @@ func SubmitPrediction(c *gin.Context) {
 	json.Unmarshal([]byte(candlesStr), &candles)
 	json.Unmarshal([]byte(futureStr), &future)
 
-	if len(candles) == 0 || len(future) == 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Invalid segment data",
-		})
-		return
-	}
-
 	lastClose := candles[len(candles)-1].Close
 	futureClose := future[0].Close
 
@@ -98,12 +91,55 @@ func SubmitPrediction(c *gin.Context) {
 	}
 
 	result := "wrong"
+	xpEarned := 0
+
 	if req.Prediction == actualDirection {
 		result = "correct"
+		xpEarned = 100
+	}
+
+	// TEMPORARY: Hardcoded test user ID
+	testUserID := "a7f335ae-0f65-4382-b810-6c8faa88c95f"
+
+	// Insert game session
+	_, err = database.DB.Exec(`
+		INSERT INTO game_sessions (user_id, segment_id, prediction, result, xp_earned)
+		VALUES ($1, $2, $3, $4, $5)
+	`,
+		testUserID,
+		req.SegmentID,
+		req.Prediction,
+		result,
+		xpEarned,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// Update user XP
+	_, err = database.DB.Exec(`
+		UPDATE users
+		SET xp = xp + $1,
+		    total_games = total_games + 1
+		WHERE id = $2
+	`,
+		xpEarned,
+		testUserID,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update user XP",
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"result":           result,
 		"actual_direction": actualDirection,
+		"xp_earned":        xpEarned,
 	})
 }

@@ -15,5 +15,6 @@ func RegisterRoutes(r *gin.Engine) {
 	r.POST("/game/submit", handlers.SubmitPrediction)
 	r.GET("/leaderboard", handlers.GetLeaderboard)
 	r.GET("/rank/:user_id", handlers.GetRank)
+	r.GET("/stats/:user_id", handlers.GetStats)
 
 }

@@ -7,14 +7,16 @@ import (
 func UpdateUserXP(userID string, baseXP int, result string) (int, error) {
 
 	var currentStreak int
+	var bestStreak int
 	var currentRank string
 
-	// Get current streak and rank
 	row := database.DB.QueryRow(`
-		SELECT streak, rank FROM users WHERE id = $1
+		SELECT streak, best_streak, rank
+		FROM users
+		WHERE id = $1
 	`, userID)
 
-	err := row.Scan(&currentStreak, &currentRank)
+	err := row.Scan(&currentStreak, &bestStreak, &currentRank)
 	if err != nil {
 		return 0, err
 	}
@@ -25,20 +27,23 @@ func UpdateUserXP(userID string, baseXP int, result string) (int, error) {
 	if result == "correct" {
 		currentStreak++
 
-		// Streak bonus
+		// streak bonus
 		if currentStreak == 3 {
 			bonusXP = 20
 		} else if currentStreak == 5 {
 			bonusXP = 50
 		}
 
+		if currentStreak > bestStreak {
+			bestStreak = currentStreak
+		}
+
 		totalXPChange = baseXP + bonusXP
 
 	} else {
-		// Reset streak
 		currentStreak = 0
 
-		// Rank-based XP loss
+		// rank-based loss
 		switch currentRank {
 		case "Trader":
 			totalXPChange = -20
@@ -46,25 +51,28 @@ func UpdateUserXP(userID string, baseXP int, result string) (int, error) {
 			totalXPChange = -40
 		case "Alpha":
 			totalXPChange = -70
-		default: // Rookie
+		default:
 			totalXPChange = 0
 		}
 	}
 
-	// Update XP safely (never below 0)
+	// Update user core fields
 	_, err = database.DB.Exec(`
 		UPDATE users
 		SET xp = GREATEST(xp + $1, 0),
 		    total_games = total_games + 1,
-		    streak = $2
-		WHERE id = $3
-	`, totalXPChange, currentStreak, userID)
+		    streak = $2,
+		    best_streak = $3,
+		    total_correct = total_correct + CASE WHEN $4 = 'correct' THEN 1 ELSE 0 END,
+		    total_wrong = total_wrong + CASE WHEN $4 = 'wrong' THEN 1 ELSE 0 END
+		WHERE id = $5
+	`, totalXPChange, currentStreak, bestStreak, result, userID)
 
 	if err != nil {
 		return 0, err
 	}
 
-	// Recalculate rank after XP update
+	// Recalculate rank
 	_, err = database.DB.Exec(`
 		UPDATE users
 		SET rank = CASE

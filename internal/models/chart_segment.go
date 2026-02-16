@@ -8,8 +8,7 @@ type Candle struct {
 }
 
 type ChartSegment struct {
-	ID         uuid.UUID `json:"id"`
-	Candles    []Candle  `json:"candles"`
-	Future     []Candle  `json:"future"`
-	Difficulty string    `json:"difficulty"`
+	ID      uuid.UUID `json:"id"`
+	Candles []Candle  `json:"candles"`
+	Future  []Candle  `json:"future"`
 }

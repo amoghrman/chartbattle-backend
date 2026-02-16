@@ -7,17 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetLeaderboard(c *gin.Context) {
+func GetRank(c *gin.Context) {
 
-	leaderboard, err := services.GetLeaderboard()
+	userID := c.Param("user_id")
+
+	user, err := services.GetUserRank(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch leaderboard",
+			"error": "User not found",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"leaderboard": leaderboard,
+		"user": user,
 	})
 }

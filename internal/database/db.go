@@ -18,8 +18,7 @@ func Connect() {
 		log.Fatal("Failed to connect to DB:", err)
 	}
 
-	err = db.Ping()
-	if err != nil {
+	if err = db.Ping(); err != nil {
 		log.Fatal("Database not reachable:", err)
 	}
 
